@@ -82,7 +82,7 @@ private
           if bundler.has_gem?('turbo-sprockets-rails3')
             log("assets_clean_expired") do
               clean_expired = rake.task("assets:clean_expired")
-              clean_expired.invoke(env: rake_env)
+              clean_expired.invoke(env: rake_env.merge({ quiet: true }))
               if clean_expired.success?
                 log 'assets_clean_expired', status: 'success'
                 cache.store 'public/assets'
@@ -92,6 +92,7 @@ private
               end
             end
           else
+            puts 'Turbo-sprockets not found. Proceeding without it'
             cache.clear 'public/assets'
           end
         else
