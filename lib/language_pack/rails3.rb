@@ -63,6 +63,9 @@ private
           puts "Detected manifest.yml, assuming assets were compiled locally"
           return true
         end
+        # create asset directory
+        FileUtils.mkdir_p('public')
+        cache.load "public/assets"
 
         precompile = rake.task("assets:precompile")
         return true unless precompile.is_defined?
@@ -74,6 +77,23 @@ private
         if precompile.success?
           log "assets_precompile", :status => "success"
           puts "Asset precompilation completed (#{"%.2f" % precompile.time}s)"
+          # If 'turbo-sprockets-rails3' gem is available, run 'assets:clean_expired' and
+          # cache assets if task was successful.
+          if bundler.has_gem?('turbo-sprockets-rails3')
+            log("assets_clean_expired") do
+              clean_expired = rake.task("assets:clean_expired")
+              clean_expired.invoke(env: rake_env)
+              if clean_expired.success?
+                log 'assets_clean_expired', status: 'success'
+                cache.store 'public/assets'
+              else
+                log 'assets_clean_expired', status: 'failure'
+                cache.clear 'public/assets'
+              end
+            end
+          else
+            cache.clear 'public/assets'
+          end
         else
           log "assets_precompile", :status => "failure"
           error "Precompiling assets failed."
